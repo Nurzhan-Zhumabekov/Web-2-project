@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenin | Restaurant</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1046/1046857.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="nav">
+        <div class="container">
+            <a href="index.html" class="logo">ZENIN</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="menu.html">Menu</a></li>
+                <li><a href="#booking">Book</a></li>
+            </ul>
+            <div class="auth-buttons" id="auth-nav">
+                <button class="btn btn-outline" id="login-btn" style="padding: 8px 20px;">Log in</button>
+                <button class="btn btn-primary" id="register-btn" style="padding: 8px 20px;">Sign Up</button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-text">
+            <h1>ZENIN<br>RESTAURANT</h1>
+            <p>Experience authentic Italian cuisine. Book a table or order delivery.</p>
+            <div class="hero-btns">
+                <a href="menu.html" class="btn btn-primary">View Menu</a>
+                <a href="#booking" class="btn btn-outline">Book Table</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="booking" class="booking-section">
+        <div class="booking-form">
+            <h2>Book a Table</h2>
+            <form id="booking-form">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="time" id="time" required>
+                </div>
+                <div class="form-group">
+                    <label>Guests</label>
+                    <input type="number" id="guests" min="1" max="10" value="2" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Book Now</button>
+            </form>
+        </div>
+    </section>
+
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="auth-forms"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
