@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const MenuItem = require('../models/MenuItem');
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 // Get all menu items
 router.get('/', async (req, res) => {
@@ -13,15 +14,46 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Admin: get all menu items
+router.get('/admin', auth, role(['admin']), async (req, res) => {
+    try {
+        const items = await MenuItem.find();
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Add menu item (Admin only)
-router.post('/', auth, async (req, res) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+router.post('/', auth, role(['admin']), async (req, res) => {
     try {
         const newItem = new MenuItem(req.body);
         await newItem.save();
         res.status(201).json(newItem);
     } catch (err) {
         res.status(400).json({ message: err.message });
+    }
+});
+
+// Update menu item (Admin only)
+router.put('/:id', auth, role(['admin']), async (req, res) => {
+    try {
+        const updated = await MenuItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updated) return res.status(404).json({ message: 'Menu item not found' });
+        res.json(updated);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Delete menu item (Admin only)
+router.delete('/:id', auth, role(['admin']), async (req, res) => {
+    try {
+        const deleted = await MenuItem.findByIdAndDelete(req.params.id);
+        if (!deleted) return res.status(404).json({ message: 'Menu item not found' });
+        res.json({ message: 'Menu item deleted' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 
@@ -93,7 +125,7 @@ router.post('/seed', async (req, res) => {
                 name: 'Fresh Lemonade',
                 description: 'House-made lemonade with fresh mint',
                 price: 6,
-                category: 'Drinks',
+                category: 'Beverage',
                 image: 'https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=500',
                 isAvailable: true
             }

@@ -13,7 +13,8 @@ const bookingSchema = Joi.object({
     time: Joi.string().required(),
     guests: Joi.number().min(1).max(20).required(),
     tableNumber: Joi.number(),
-    specialRequests: Joi.string().allow('')
+    specialRequests: Joi.string().allow(''),
+    status: Joi.string().valid('pending', 'confirmed', 'cancelled')
 });
 
 // Create a booking
@@ -58,7 +59,7 @@ router.get('/', auth, async (req, res) => {
 // Get specific booking
 router.get('/:id', auth, async (req, res) => {
     try {
-        const booking = await Booking.findById(req.id);
+        const booking = await Booking.findById(req.params.id);
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
         if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
@@ -78,6 +79,10 @@ router.put('/:id', auth, validate(bookingSchema), async (req, res) => {
 
         if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        if (req.body.status && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to change status' });
         }
 
         booking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });

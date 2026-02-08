@@ -1,64 +1,88 @@
-const API_URL = "/api";
-let token = localStorage.getItem("token");
-let user = JSON.parse(localStorage.getItem("user") || "null");
+﻿const API_URL = "/api";
+let user = null;
+let menuItems = [];
+let adminEditMenuId = null;
+let adminBookings = [];
 
-// cart храним в localStorage
-let cart = JSON.parse(localStorage.getItem("cart") || "[]"); // [{id,name,price,qty}]
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-// --- Initialization ---
 document.addEventListener("DOMContentLoaded", () => {
-    fetchMenu();
+    init();
+});
+
+async function init() {
+    await checkAuth();
+    await loadMenu();
     updateAuthUI();
     setupEventListeners();
     renderCart();
     updateCartCount();
-});
 
-// --- UI Updates ---
+    if (isAdmin()) {
+        showAdminPanel();
+        await loadAdminData();
+    }
+}
+
+async function checkAuth() {
+    try {
+        const res = await fetch(`${API_URL}/auth/profile`, {
+            credentials: "include"
+        });
+        if (!res.ok) {
+            user = null;
+            return;
+        }
+        user = await res.json();
+    } catch (err) {
+        user = null;
+    }
+}
+
+function isAdmin() {
+    return user && user.role === "admin";
+}
+
 function updateAuthUI() {
     const authNav = document.getElementById("auth-nav");
     if (!authNav) return;
 
-    if (token && user) {
+    if (user) {
+        const adminLink = isAdmin() ? '<a href="#admin-panel" class="btn btn-outline" style="padding: 8px 20px;">Admin</a>' : "";
         authNav.innerHTML = `
       <span class="user-welcome">Welcome, ${user.username}</span>
+      ${adminLink}
       <button class="btn btn-outline" id="logout-btn">Logout</button>
     `;
-        document.getElementById("logout-btn").addEventListener("click", logout);
+        const logoutBtn = document.getElementById("logout-btn");
+        if (logoutBtn) logoutBtn.addEventListener("click", logout);
     } else {
         authNav.innerHTML = `
       <button class="btn btn-outline" id="login-btn">Login</button>
       <button class="btn btn-primary" id="register-btn">Sign Up</button>
     `;
-        document.getElementById("login-btn").addEventListener("click", () => showAuthModal("login"));
-        document.getElementById("register-btn").addEventListener("click", () => showAuthModal("register"));
+        const loginBtn = document.getElementById("login-btn");
+        const registerBtn = document.getElementById("register-btn");
+        if (loginBtn) loginBtn.addEventListener("click", () => showAuthModal("login"));
+        if (registerBtn) registerBtn.addEventListener("click", () => showAuthModal("register"));
     }
 }
 
-const MENU_ITEMS = [
-    { id: 1, name: "Bruschetta", category: "Appetizer", price: 6, image: "images/menu/bruschetta.jpg" },
-    { id: 2, name: "Spring Rolls", category: "Appetizer", price: 5, image: "images/menu/spring-rolls.jpg" },
-    { id: 3, name: "Garlic Bread", category: "Appetizer", price: 4, image: "images/menu/garlic-bread.jpg" },
-    { id: 4, name: "Nachos", category: "Appetizer", price: 7, image: "images/menu/nachos.jpg" },
-
-    { id: 5, name: "Steak", category: "Main Course", price: 18, image: "images/menu/steak.jpg" },
-    { id: 6, name: "Pasta Carbonara", category: "Main Course", price: 14, image: "images/menu/pasta-carbonara.jpg" },
-    { id: 7, name: "Burger", category: "Main Course", price: 12, image: "images/menu/burger.jpg" },
-    { id: 8, name: "Pizza", category: "Main Course", price: 15, image: "images/menu/pizza.jpg" },
-
-    { id: 9, name: "Cheesecake", category: "Dessert", price: 6, image: "images/menu/cheesecake.jpg" },
-    { id: 10, name: "Chocolate Cake", category: "Dessert", price: 7, image: "images/menu/chocolate-cake.jpg" },
-    { id: 11, name: "Ice Cream", category: "Dessert", price: 5, image: "images/menu/ice-cream.jpg" },
-    { id: 12, name: "Tiramisu", category: "Dessert", price: 6, image: "images/menu/tiramisu.jpg" },
-
-    { id: 13, name: "Coffee", category: "Drinks", price: 3, image: "images/menu/coffee.jpg" },
-    { id: 14, name: "Fresh Juice", category: "Drinks", price: 4, image: "images/menu/fresh-juice.jpg" },
-    { id: 15, name: "Lemonade", category: "Drinks", price: 4, image: "images/menu/lemonade.jpg" },
-    { id: 16, name: "Tea", category: "Drinks", price: 3, image: "images/menu/tea.jpg" },
-];
+async function loadMenu() {
+    try {
+        const res = await fetch(`${API_URL}/menu`);
+        if (!res.ok) throw new Error("Menu load failed");
+        menuItems = await res.json();
+        fetchMenu();
+    } catch (err) {
+        const grid = document.getElementById("menu-grid");
+        if (grid) grid.innerHTML = "<p class=\"empty-msg\">Menu is unavailable.</p>";
+    }
+}
 
 function fetchMenu(category = "all") {
-    const items = category === "all" ? MENU_ITEMS : MENU_ITEMS.filter((i) => i.category === category);
+    const visible = isAdmin() ? menuItems : menuItems.filter((i) => i.isAvailable !== false);
+    const items = category === "all" ? visible : visible.filter((i) => i.category === category);
     renderMenu(items);
 }
 
@@ -66,11 +90,10 @@ function renderMenu(items) {
     const grid = document.getElementById("menu-grid");
     if (!grid) return;
 
-
     grid.innerHTML = items.map(item => `
     <div class="menu-item">
       <img
-      src="${item.image}"
+      src="${item.image || "images/placeholder-food.svg"}"
       alt="${item.name}"
       loading="lazy"
       referrerpolicy="no-referrer"
@@ -79,13 +102,12 @@ function renderMenu(items) {
       <div class="menu-item-content">
         <h3>${item.name}</h3>
         <div class="price">$${item.price}</div>
-        <button class="choose-btn" data-id="${item.id}">Add to Cart</button>
+        <button class="choose-btn" data-id="${item._id}">Add to Cart</button>
       </div>
     </div>
   `).join("");
 }
 
-// --- Auth Functions ---
 function showAuthModal(type) {
     const modal = document.getElementById("auth-modal");
     const forms = document.getElementById("auth-forms");
@@ -95,21 +117,31 @@ function showAuthModal(type) {
 
     if (type === "login") {
         forms.innerHTML = `
-      <h2>Login</h2>
-      <form id="login-form-inner">
-        <input type="email" placeholder="Email" id="login-email" required>
-        <input type="password" placeholder="Password" id="login-password" required>
-        <button type="submit" class="btn btn-primary w-full">Login</button>
+      <div class="auth-title">Login</div>
+      <form id="login-form-inner" class="auth-form">
+        <div class="auth-grid">
+          <div class="auth-fields">
+            <input class="auth-input" type="email" placeholder="Email" id="login-email" required>
+            <input class="auth-input" type="password" placeholder="Password" id="login-password" required>
+          </div>
+          <button type="submit" class="auth-action">Login</button>
+        </div>
+        <div class="auth-hint">Use your account email and password</div>
       </form>
     `;
     } else {
         forms.innerHTML = `
-      <h2>Register</h2>
-      <form id="register-form-inner">
-        <input type="text" placeholder="Username" id="reg-username" required>
-        <input type="email" placeholder="Email" id="reg-email" required>
-        <input type="password" placeholder="Password" id="reg-password" required>
-        <button type="submit" class="btn btn-primary w-full">Sign Up</button>
+      <div class="auth-title">Register</div>
+      <form id="register-form-inner" class="auth-form">
+        <div class="auth-grid">
+          <div class="auth-fields">
+            <input class="auth-input" type="text" placeholder="Username" id="reg-username" required>
+            <input class="auth-input" type="email" placeholder="Email" id="reg-email" required>
+            <input class="auth-input" type="password" placeholder="Password" id="reg-password" required>
+          </div>
+          <button type="submit" class="auth-action">Sign Up</button>
+        </div>
+        <div class="auth-hint">Create a new account to continue</div>
       </form>
     `;
     }
@@ -127,33 +159,47 @@ function showAuthModal(type) {
         const res = await fetch(`${API_URL}${path}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(body),
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
-        if (data.token) {
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("user", JSON.stringify(data.user));
-            token = data.token;
-            user = data.user;
+        if (res.ok) {
+            user = data.user || null;
+            if (!user) await checkAuth();
             modal.style.display = "none";
             updateAuthUI();
+            if (isAdmin()) {
+                showAdminPanel();
+                await loadAdminData();
+            }
         } else {
             alert(data.message || "Auth failed");
         }
     });
 }
 
-function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    token = null;
+async function logout() {
+    await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include"
+    });
     user = null;
     updateAuthUI();
+    hideAdminPanel();
 }
 
-// --- Cart (Fixed) ---
+function showAdminPanel() {
+    const panel = document.getElementById("admin-panel");
+    if (panel) panel.style.display = "block";
+}
+
+function hideAdminPanel() {
+    const panel = document.getElementById("admin-panel");
+    if (panel) panel.style.display = "none";
+}
+
 function saveCart() {
     localStorage.setItem("cart", JSON.stringify(cart));
 }
@@ -164,14 +210,14 @@ function updateCartCount() {
 }
 
 function addToCartById(id) {
-    if (!token) return alert("Please login to order!");
+    if (!user) return alert("Please login to order!");
 
-    const item = MENU_ITEMS.find((x) => x.id === id);
+    const item = menuItems.find((x) => x._id === id);
     if (!item) return;
 
     const existing = cart.find((x) => x.id === id);
     if (existing) existing.qty += 1;
-    else cart.push({ id: item.id, name: item.name, price: item.price, qty: 1 });
+    else cart.push({ id: item._id, name: item.name, price: item.price, qty: 1 });
 
     saveCart();
     renderCart();
@@ -198,12 +244,12 @@ function renderCart() {
             .map(
                 (item) => `
         <div class="cart-item">
-          <span>${item.name} × ${item.qty}</span>
+          <span>${item.name} x ${item.qty}</span>
           <span>$${item.price * item.qty}</span>
           <div>
-            <button class="qty-btn" data-action="dec" data-id="${item.id}">−</button>
+            <button class="qty-btn" data-action="dec" data-id="${item.id}">-</button>
             <button class="qty-btn" data-action="inc" data-id="${item.id}">+</button>
-            <button class="remove-btn" data-action="remove" data-id="${item.id}">×</button>
+            <button class="remove-btn" data-action="remove" data-id="${item.id}">x</button>
           </div>
         </div>
       `
@@ -236,9 +282,7 @@ function changeQty(id, delta) {
     updateCartCount();
 }
 
-// --- Event Listeners ---
 function setupEventListeners() {
-    // Filters
     document.querySelectorAll(".filter-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
             document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
@@ -247,23 +291,21 @@ function setupEventListeners() {
         });
     });
 
-    // Add to Cart buttons (delegation)
     const grid = document.getElementById("menu-grid");
     if (grid) {
         grid.addEventListener("click", (e) => {
             const btn = e.target.closest(".choose-btn");
             if (!btn) return;
-            addToCartById(Number(btn.dataset.id));
+            addToCartById(btn.dataset.id);
         });
     }
 
-    // Cart buttons (delegation)
     const cartEl = document.getElementById("cart-items");
     if (cartEl) {
         cartEl.addEventListener("click", (e) => {
             const btn = e.target.closest("[data-action]");
             if (!btn) return;
-            const id = Number(btn.dataset.id);
+            const id = btn.dataset.id;
             const action = btn.dataset.action;
 
             if (action === "inc") return changeQty(id, +1);
@@ -272,7 +314,6 @@ function setupEventListeners() {
         });
     }
 
-    // Close modal (если есть)
     const closeBtn = document.querySelector(".close-modal");
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
@@ -281,12 +322,11 @@ function setupEventListeners() {
         });
     }
 
-    // Booking form (ТОЛЬКО если он реально есть на странице)
     const bookingForm = document.getElementById("booking-form");
     if (bookingForm) {
         bookingForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            if (!token) return alert("Please login to book a table!");
+            if (!user) return alert("Please login to book a table!");
 
             const bookingData = {
                 date: document.getElementById("date").value,
@@ -296,7 +336,8 @@ function setupEventListeners() {
 
             const res = await fetch(`${API_URL}/bookings`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify(bookingData),
             });
 
@@ -310,12 +351,11 @@ function setupEventListeners() {
         });
     }
 
-    // Order form (ТОЛЬКО если есть)
     const orderForm = document.getElementById("order-form");
     if (orderForm) {
         orderForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            if (!token) return alert("Please login to order!");
+            if (!user) return alert("Please login to order!");
 
             const orderData = {
                 items: cart.map((i) => ({ menuItem: i.id, quantity: i.qty })),
@@ -327,7 +367,8 @@ function setupEventListeners() {
 
             const res = await fetch(`${API_URL}/orders`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify(orderData),
             });
 
@@ -342,5 +383,218 @@ function setupEventListeners() {
                 alert(err.message || "Order failed");
             }
         });
+    }
+
+    const adminMenuForm = document.getElementById("admin-menu-form");
+    if (adminMenuForm) {
+        adminMenuForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!isAdmin()) return alert("Admin access required");
+
+            const payload = {
+                name: document.getElementById("menu-name").value,
+                description: document.getElementById("menu-desc").value,
+                price: Number(document.getElementById("menu-price").value),
+                category: document.getElementById("menu-category").value,
+                image: document.getElementById("menu-image").value,
+                isAvailable: true
+            };
+
+            const url = adminEditMenuId ? `${API_URL}/menu/${adminEditMenuId}` : `${API_URL}/menu`;
+            const method = adminEditMenuId ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                adminEditMenuId = null;
+                adminMenuForm.reset();
+                await loadAdminMenu();
+                await loadMenu();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.message || "Menu update failed");
+            }
+        });
+    }
+
+    const adminMenuList = document.getElementById("admin-menu-list");
+    if (adminMenuList) {
+        adminMenuList.addEventListener("click", async (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+
+            if (action === "delete") {
+                if (!confirm("Delete this item?")) return;
+                await fetch(`${API_URL}/menu/${id}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
+                await loadAdminMenu();
+                await loadMenu();
+            }
+
+            if (action === "edit") {
+                const item = menuItems.find((x) => x._id === id);
+                if (!item) return;
+                adminEditMenuId = id;
+                document.getElementById("menu-name").value = item.name;
+                document.getElementById("menu-desc").value = item.description;
+                document.getElementById("menu-price").value = item.price;
+                document.getElementById("menu-category").value = item.category;
+                document.getElementById("menu-image").value = item.image || "";
+            }
+        });
+    }
+
+    const adminBookingsEl = document.getElementById("admin-bookings");
+    if (adminBookingsEl) {
+        adminBookingsEl.addEventListener("click", async (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+
+            if (action === "delete") {
+                if (!confirm("Delete this booking?")) return;
+                await fetch(`${API_URL}/bookings/${id}`, { method: "DELETE", credentials: "include" });
+                await loadAdminBookings();
+            }
+
+            if (action === "status") {
+                const status = btn.dataset.status;
+                await updateBookingStatus(id, status);
+            }
+        });
+    }
+
+    const adminOrdersEl = document.getElementById("admin-orders");
+    if (adminOrdersEl) {
+        adminOrdersEl.addEventListener("click", async (e) => {
+            const btn = e.target.closest("button");
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+
+            if (action === "delete") {
+                if (!confirm("Delete this order?")) return;
+                await fetch(`${API_URL}/orders/${id}`, { method: "DELETE", credentials: "include" });
+                await loadAdminOrders();
+            }
+
+            if (action === "status") {
+                const status = btn.dataset.status;
+                await fetch(`${API_URL}/orders/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ status })
+                });
+                await loadAdminOrders();
+            }
+        });
+    }
+}
+
+async function loadAdminData() {
+    await Promise.all([loadAdminMenu(), loadAdminBookings(), loadAdminOrders()]);
+}
+
+async function loadAdminMenu() {
+    try {
+        const res = await fetch(`${API_URL}/menu/admin`, { credentials: "include" });
+        if (!res.ok) return;
+        menuItems = await res.json();
+        const list = document.getElementById("admin-menu-list");
+        if (!list) return;
+        list.innerHTML = menuItems.map(item => `
+            <div class="admin-item">
+                <div><strong>${item.name}</strong> - $${item.price}</div>
+                <div>${item.category}</div>
+                <div class="admin-actions">
+                    <button data-action="edit" data-id="${item._id}">Edit</button>
+                    <button data-action="delete" data-id="${item._id}">Delete</button>
+                </div>
+            </div>
+        `).join("");
+        fetchMenu();
+    } catch (err) {
+        return;
+    }
+}
+
+async function loadAdminBookings() {
+    try {
+        const res = await fetch(`${API_URL}/bookings`, { credentials: "include" });
+        if (!res.ok) return;
+        adminBookings = await res.json();
+        const list = document.getElementById("admin-bookings");
+        if (!list) return;
+        list.innerHTML = adminBookings.map(booking => `
+            <div class="admin-item">
+                <div><strong>${booking.user?.username || "User"}</strong> - ${new Date(booking.date).toLocaleDateString()} ${booking.time}</div>
+                <div>Status: ${booking.status}</div>
+                <div class="admin-actions">
+                    <button data-action="status" data-status="confirmed" data-id="${booking._id}">Confirm</button>
+                    <button data-action="status" data-status="cancelled" data-id="${booking._id}">Cancel</button>
+                    <button data-action="delete" data-id="${booking._id}">Delete</button>
+                </div>
+            </div>
+        `).join("");
+    } catch (err) {
+        return;
+    }
+}
+
+async function updateBookingStatus(id, status) {
+    const booking = adminBookings.find((b) => b._id === id);
+    if (!booking) return;
+
+    const payload = {
+        date: booking.date,
+        time: booking.time,
+        guests: booking.guests,
+        tableNumber: booking.tableNumber,
+        specialRequests: booking.specialRequests || "",
+        status
+    };
+
+    await fetch(`${API_URL}/bookings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+    });
+
+    await loadAdminBookings();
+}
+
+async function loadAdminOrders() {
+    try {
+        const res = await fetch(`${API_URL}/orders`, { credentials: "include" });
+        if (!res.ok) return;
+        const orders = await res.json();
+        const list = document.getElementById("admin-orders");
+        if (!list) return;
+        list.innerHTML = orders.map(order => `
+            <div class="admin-item">
+                <div><strong>${order.user?.username || "User"}</strong> - $${order.totalAmount}</div>
+                <div>Status: ${order.status}</div>
+                <div class="admin-actions">
+                    <button data-action="status" data-status="processing" data-id="${order._id}">Process</button>
+                    <button data-action="status" data-status="shipped" data-id="${order._id}">Ship</button>
+                    <button data-action="status" data-status="delivered" data-id="${order._id}">Deliver</button>
+                    <button data-action="delete" data-id="${order._id}">Delete</button>
+                </div>
+            </div>
+        `).join("");
+    } catch (err) {
+        return;
     }
 }

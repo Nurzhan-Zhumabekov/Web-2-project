@@ -23,7 +23,7 @@
 
             <div class="nav-right">
                 <div id="auth-nav" class="auth-nav"></div>
-                <a href="#cart" class="cart-btn">🛒 Cart <span id="cart-count">(0)</span></a>
+                <a href="#cart" class="cart-btn">Cart <span id="cart-count">(0)</span></a>
             </div>
         </div>
     </nav>
@@ -35,7 +35,7 @@
             <button class="filter-btn" data-category="Appetizer">Appetizers</button>
             <button class="filter-btn" data-category="Main Course">Main</button>
             <button class="filter-btn" data-category="Dessert">Desserts</button>
-            <button class="filter-btn" data-category="Drinks">Drinks</button>
+            <button class="filter-btn" data-category="Beverage">Drinks</button>
         </div>
         <div id="menu-grid" class="menu-grid"></div>
     </section>
@@ -45,13 +45,13 @@
             <h2 class="section-title">Your Order</h2>
             <div class="cart-grid">
                 <div class="cart-card">
-                    <h3>🛒 Cart</h3>
+                    <h3>Cart</h3>
                     <div id="cart-items">
                         <p class="empty-msg">Your cart is empty</p>
                     </div>
                 </div>
                 <div class="cart-card" id="order-form-container" style="display: none;">
-                    <h3>📦 Delivery</h3>
+                    <h3>Delivery</h3>
                     <form id="order-form">
                         <div class="form-group">
                             <label>Address</label>
@@ -70,6 +70,54 @@
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Order</button>
                     </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="admin-panel" class="admin-section" style="display: none;">
+        <div class="container">
+            <h2 class="section-title">Admin Panel</h2>
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <h3>Menu Items</h3>
+                    <form id="admin-menu-form">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" id="menu-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <input type="text" id="menu-desc" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Price</label>
+                            <input type="number" id="menu-price" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="menu-category" required>
+                                <option value="Appetizer">Appetizer</option>
+                                <option value="Main Course">Main Course</option>
+                                <option value="Dessert">Dessert</option>
+                                <option value="Beverage">Beverage</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Image URL</label>
+                            <input type="url" id="menu-image">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Add Item</button>
+                    </form>
+                    <div id="admin-menu-list" class="admin-list"></div>
+                </div>
+                <div class="admin-card">
+                    <h3>Bookings</h3>
+                    <div id="admin-bookings" class="admin-list"></div>
+                </div>
+                <div class="admin-card">
+                    <h3>Orders</h3>
+                    <div id="admin-orders" class="admin-list"></div>
                 </div>
             </div>
         </div>
