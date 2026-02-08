@@ -17,11 +17,6 @@ async function init() {
     setupEventListeners();
     renderCart();
     updateCartCount();
-
-    if (isAdmin()) {
-        showAdminPanel();
-        await loadAdminData();
-    }
 }
 
 async function checkAuth() {
@@ -48,12 +43,14 @@ function updateAuthUI() {
     if (!authNav) return;
 
     if (user) {
-        const adminLink = isAdmin() ? '<a href="#admin-panel" class="btn btn-outline" style="padding: 8px 20px;">Admin</a>' : "";
+        const adminLink = isAdmin() ? '<button class="btn btn-outline" id="admin-btn" style="padding: 8px 20px;">Admin</button>' : "";
         authNav.innerHTML = `
       <span class="user-welcome">Welcome, ${user.username}</span>
       ${adminLink}
       <button class="btn btn-outline" id="logout-btn">Logout</button>
     `;
+        const adminBtn = document.getElementById("admin-btn");
+        if (adminBtn) adminBtn.addEventListener("click", openAdminPanel);
         const logoutBtn = document.getElementById("logout-btn");
         if (logoutBtn) logoutBtn.addEventListener("click", logout);
     } else {
@@ -190,14 +187,39 @@ async function logout() {
     hideAdminPanel();
 }
 
-function showAdminPanel() {
+function setUserSectionsVisible(visible) {
+    const menuSection = document.querySelector(".menu-section");
+    const cartSection = document.getElementById("cart");
+    if (menuSection) menuSection.style.display = visible ? "" : "none";
+    if (cartSection) cartSection.style.display = visible ? "" : "none";
+}
+
+async function openAdminPanel() {
     const panel = document.getElementById("admin-panel");
-    if (panel) panel.style.display = "block";
+    if (!panel) return;
+
+    const isOpen = panel.style.display === "block";
+    if (isOpen) {
+        hideAdminPanel();
+        setUserSectionsVisible(true);
+        return;
+    }
+
+    panel.style.display = "block";
+    setUserSectionsVisible(false);
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!panel.dataset.loaded) {
+        await loadAdminData();
+        panel.dataset.loaded = "true";
+    }
 }
 
 function hideAdminPanel() {
     const panel = document.getElementById("admin-panel");
-    if (panel) panel.style.display = "none";
+    if (panel) {
+        panel.style.display = "none";
+        delete panel.dataset.loaded;
+    }
 }
 
 function saveCart() {
