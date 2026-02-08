@@ -19,6 +19,5 @@ router.put('/:id', auth, role(['admin']), menuController.updateMenuItem);
 // Delete menu item (Admin only)
 router.delete('/:id', auth, role(['admin']), menuController.deleteMenuItem);
 
-router.post('/seed', menuController.seedMenu);
 
 module.exports = router;
