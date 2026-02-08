@@ -3,6 +3,7 @@ let user = null;
 let menuItems = [];
 let adminEditMenuId = null;
 let adminBookings = [];
+let csrfToken = null;
 
 let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
@@ -12,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function init() {
     await checkAuth();
+    await refreshCsrfToken();
     await loadMenu();
     updateAuthUI();
     setupEventListeners();
@@ -32,6 +34,21 @@ async function checkAuth() {
     } catch (err) {
         user = null;
     }
+}
+
+async function refreshCsrfToken() {
+    try {
+        const res = await fetch(`${API_URL}/csrf-token`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        csrfToken = data.csrfToken;
+    } catch (err) {
+        csrfToken = null;
+    }
+}
+
+function csrfHeaders() {
+    return csrfToken ? { "X-CSRF-Token": csrfToken } : {};
 }
 
 function isAdmin() {
@@ -155,7 +172,7 @@ function showAuthModal(type) {
 
         const res = await fetch(`${API_URL}${path}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...csrfHeaders() },
             credentials: "include",
             body: JSON.stringify(body),
         });
@@ -165,6 +182,7 @@ function showAuthModal(type) {
         if (res.ok) {
             user = data.user || null;
             if (!user) await checkAuth();
+            await refreshCsrfToken();
             modal.style.display = "none";
             updateAuthUI();
             if (isAdmin()) {
@@ -180,9 +198,11 @@ function showAuthModal(type) {
 async function logout() {
     await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
-        credentials: "include"
+        credentials: "include",
+        headers: { ...csrfHeaders() }
     });
     user = null;
+    await refreshCsrfToken();
     updateAuthUI();
     hideAdminPanel();
 }
@@ -358,7 +378,7 @@ function setupEventListeners() {
 
             const res = await fetch(`${API_URL}/bookings`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...csrfHeaders() },
                 credentials: "include",
                 body: JSON.stringify(bookingData),
             });
@@ -389,7 +409,7 @@ function setupEventListeners() {
 
             const res = await fetch(`${API_URL}/orders`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...csrfHeaders() },
                 credentials: "include",
                 body: JSON.stringify(orderData),
             });
@@ -427,7 +447,7 @@ function setupEventListeners() {
 
             const res = await fetch(url, {
                 method,
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...csrfHeaders() },
                 credentials: "include",
                 body: JSON.stringify(payload)
             });
@@ -456,7 +476,8 @@ function setupEventListeners() {
                 if (!confirm("Delete this item?")) return;
                 await fetch(`${API_URL}/menu/${id}`, {
                     method: "DELETE",
-                    credentials: "include"
+                    credentials: "include",
+                    headers: { ...csrfHeaders() }
                 });
                 await loadAdminMenu();
                 await loadMenu();
@@ -485,7 +506,11 @@ function setupEventListeners() {
 
             if (action === "delete") {
                 if (!confirm("Delete this booking?")) return;
-                await fetch(`${API_URL}/bookings/${id}`, { method: "DELETE", credentials: "include" });
+                await fetch(`${API_URL}/bookings/${id}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                    headers: { ...csrfHeaders() }
+                });
                 await loadAdminBookings();
             }
 
@@ -506,7 +531,11 @@ function setupEventListeners() {
 
             if (action === "delete") {
                 if (!confirm("Delete this order?")) return;
-                await fetch(`${API_URL}/orders/${id}`, { method: "DELETE", credentials: "include" });
+                await fetch(`${API_URL}/orders/${id}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                    headers: { ...csrfHeaders() }
+                });
                 await loadAdminOrders();
             }
 
@@ -514,7 +543,7 @@ function setupEventListeners() {
                 const status = btn.dataset.status;
                 await fetch(`${API_URL}/orders/${id}`, {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...csrfHeaders() },
                     credentials: "include",
                     body: JSON.stringify({ status })
                 });
@@ -589,7 +618,7 @@ async function updateBookingStatus(id, status) {
 
     await fetch(`${API_URL}/bookings/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrfHeaders() },
         credentials: "include",
         body: JSON.stringify(payload)
     });
