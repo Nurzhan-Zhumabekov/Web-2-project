@@ -1,5 +1,5 @@
 # Restaurant Management API
-
+Щ
 A modular Node.js/Express API for restaurant management, featuring authentication, booking systems, and role-based access control.
 
 ## Project Overview
