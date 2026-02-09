@@ -1,5 +1,4 @@
 # Restaurant Management API
-Щ
 A modular Node.js/Express API for restaurant management, featuring authentication, booking systems, and role-based access control.
 
 ## Project Overview
@@ -17,18 +16,7 @@ This project provides a robust backend for a restaurant application. It allows u
     ```bash
     npm install
     ```
-3.  **Environment Variables**:
-    Create a `.env` file in the root directory and add the following:
-    ```env
-    PORT=5000
-    MONGODB_URI=your_mongodb_connection_string
-    JWT_SECRET=your_jwt_secret
-    SMTP_HOST=smtp.ethereal.email
-    SMTP_PORT=587
-    SMTP_USER=your_ethereal_user
-    SMTP_PASS=your_ethereal_password
-    ```
-4.  **Run the server**:
+3.  **Run the server**:
     ```bash
     npm start
     ```
