@@ -1,0 +1,8 @@
+﻿services:
+  - type: web
+    name: web-2-project
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/start.js
+    autoDeploy: true
