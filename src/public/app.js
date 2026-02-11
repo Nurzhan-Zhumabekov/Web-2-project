@@ -1,4 +1,5 @@
 ﻿const API_URL = "/api";
+const ADMIN_PANEL_REDIRECT_KEY = "openAdminPanelOnLoad";
 let user = null;
 let menuItems = [];
 let adminEditMenuId = null;
@@ -19,6 +20,12 @@ async function init() {
     setupEventListeners();
     renderCart();
     updateCartCount();
+
+    const shouldOpenAdminPanel = localStorage.getItem(ADMIN_PANEL_REDIRECT_KEY) === "1";
+    if (isAdmin() && shouldOpenAdminPanel) {
+        localStorage.removeItem(ADMIN_PANEL_REDIRECT_KEY);
+        await openAdminPanel();
+    }
 }
 
 async function checkAuth() {
@@ -186,8 +193,7 @@ function showAuthModal(type) {
             modal.style.display = "none";
             updateAuthUI();
             if (isAdmin()) {
-                showAdminPanel();
-                await loadAdminData();
+                await openAdminPanel();
             }
         } else {
             alert(data.message || "Auth failed");
@@ -216,7 +222,11 @@ function setUserSectionsVisible(visible) {
 
 async function openAdminPanel() {
     const panel = document.getElementById("admin-panel");
-    if (!panel) return;
+    if (!panel) {
+        localStorage.setItem(ADMIN_PANEL_REDIRECT_KEY, "1");
+        window.location.href = "menu.html#admin-panel";
+        return;
+    }
 
     const isOpen = panel.style.display === "block";
     if (isOpen) {
@@ -232,6 +242,10 @@ async function openAdminPanel() {
         await loadAdminData();
         panel.dataset.loaded = "true";
     }
+}
+
+function showAdminPanel() {
+    return openAdminPanel();
 }
 
 function hideAdminPanel() {

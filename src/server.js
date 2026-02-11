@@ -8,9 +8,13 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: CLIENT_ORIGIN || true,
+    credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -24,9 +28,7 @@ const csrfProtection = csrf({
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('Could not connect to MongoDB', err));
+mongoose.set('bufferCommands', false);
 
 // Routes
 app.use((req, res, next) => {
@@ -62,7 +64,28 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Start Server only after DB is available.
+async function start() {
+    try {
+        if (!process.env.MONGODB_URI) {
+            throw new Error('MONGODB_URI is not set');
+        }
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not set');
+        }
+
+        await mongoose.connect(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 10000
+        });
+        console.log('Connected to MongoDB');
+
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error('Failed to start server:', err.message);
+        process.exit(1);
+    }
+}
+
+start();
