@@ -23,9 +23,9 @@ async function register(req, res) {
         try {
             await sendEmail({
                 email: user.email,
-                subject: 'Welcome to Restaurant App',
-                message: `Hi ${user.username}, thanks for registering!`,
-                html: `<h1>Welcome!</h1><p>Hi ${user.username}, thanks for registering!</p>`
+                subject: 'Registratsiya uspeshno zavershena',
+                message: `Здравствуйте, ${user.username}! Регистрация выполнена успешно.`,
+                html: `<h1>Регистрация прошла успешно</h1><p>Здравствуйте, ${user.username}! Ваш аккаунт в Restaurant App успешно создан.</p>`
             });
         } catch (emailErr) {
             console.error('Email could not be sent', emailErr);

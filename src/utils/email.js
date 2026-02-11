@@ -1,22 +1,28 @@
 const nodemailer = require('nodemailer');
 
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
 const sendEmail = async (options) => {
-    // For production, use SendGrid/Mailgun. For testing, use Ethereal
-    const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-        port: process.env.SMTP_PORT || 587,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
-    });
+    if (!options?.email) {
+        throw new Error('Recipient email is required');
+    }
 
     const mailOptions = {
         from: `Restaurant App <${process.env.FROM_EMAIL || 'no-reply@restaurant.com'}>`,
         to: options.email,
-        subject: options.subject,
-        text: options.message,
-        html: options.html
+        subject: options.subject || 'Restaurant App Notification',
+        text: options.message || '',
+        html: options.html || ''
     };
 
     await transporter.sendMail(mailOptions);
